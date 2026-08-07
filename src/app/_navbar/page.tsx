@@ -29,16 +29,18 @@ import {
 import { playNotificationSound } from '@/lib/sound';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import CircularProgress from '@mui/material/CircularProgress';
+import { getMyProfile } from '@/lib/userslice';
 
 function ResponsiveAppBar() {
   const [anchorElNav, setAnchorElNav] = React.useState<null | HTMLElement>(null);
   const [anchorElUser, setAnchorElUser] = React.useState<null | HTMLElement>(null);
   const [anchorElNotif, setAnchorElNotif] = React.useState<null | HTMLElement>(null);
-  const [userPhoto, setUserPhoto] = React.useState<string | null>(null);
   const [mounted, setMounted] = React.useState(false);
   const prevUnreadRef = React.useRef(0);
 
   const token = useSelector((state: State) => state.login.token);
+  // 🆕 جيب البروفايل من Redux عشان الصورة تتحدث لحظياً
+  const { myProfile } = useSelector((state: State) => state.user);
   const { notifications, unreadCount, isLoading } = useSelector((state: State) => state.notification);
   
   const router = useRouter();
@@ -58,12 +60,12 @@ function ResponsiveAppBar() {
 
   React.useEffect(() => { setMounted(true); }, []);
 
+  // 🆕 لو مفيش بروفايل في Redux، نجيبه
   React.useEffect(() => {
-    if (typeof window !== "undefined") {
-      const savedPhoto = localStorage.getItem("userPhoto");
-      setUserPhoto(savedPhoto);
+    if (token && !myProfile) {
+      dispatch(getMyProfile());
     }
-  }, [token]);
+  }, [dispatch, token, myProfile]);
 
   // Polling كل 30 ثانية
   React.useEffect(() => {
@@ -125,6 +127,10 @@ function ResponsiveAppBar() {
         return `${actorName} interacted with your content`;
     }
   };
+
+  // 🆕 نستخدم صورة Redux أولاً، لو فاضية نجرب localStorage
+  const avatarSrc = myProfile?.photo || (typeof window !== "undefined" ? localStorage.getItem("userPhoto") : null);
+  const avatarName = myProfile?.name || "U";
 
   const safeToken = mounted ? token : null;
 
@@ -268,10 +274,12 @@ function ResponsiveAppBar() {
           <Box sx={{ flexGrow: 0, display: 'flex', alignItems: 'center' }}>
             <Tooltip title="Open settings">
               <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }}>
-                {safeToken && userPhoto && userPhoto.trim() !== "" ? (
-                  <Avatar alt="User Avatar" src={userPhoto} />
+                {safeToken && avatarSrc && avatarSrc.trim() !== "" && !avatarSrc.includes("undefined") ? (
+                  <Avatar alt={avatarName} src={avatarSrc} />
                 ) : (
-                  <Avatar alt="User Avatar">U</Avatar>
+                  <Avatar alt={avatarName}>
+                    {avatarName ? avatarName.charAt(0).toUpperCase() : "U"}
+                  </Avatar>
                 )}
               </IconButton>
             </Tooltip>
@@ -286,24 +294,24 @@ function ResponsiveAppBar() {
               onClose={handleCloseUserMenu}
             >
               {safeToken ? (
-  <Box>
-    <MenuItem onClick={() => { handleCloseUserMenu(); router.push("/profile"); }}>
-      <Typography sx={{ textAlign: 'center', width: '100%' }}>Profile</Typography>
-    </MenuItem>
+                <Box>
+                  <MenuItem onClick={() => { handleCloseUserMenu(); router.push("/profile"); }}>
+                    <Typography sx={{ textAlign: 'center', width: '100%' }}>Profile</Typography>
+                  </MenuItem>
 
-    <MenuItem onClick={() => { handleCloseUserMenu(); router.push("/bookmarks"); }}>
-      <Typography sx={{ textAlign: 'center', width: '100%' }}>Bookmarks</Typography>
-    </MenuItem>
+                  <MenuItem onClick={() => { handleCloseUserMenu(); router.push("/bookmarks"); }}>
+                    <Typography sx={{ textAlign: 'center', width: '100%' }}>Bookmarks</Typography>
+                  </MenuItem>
 
-    <MenuItem onClick={() => { handleCloseUserMenu(); router.push("/change-password"); }}>
-      <Typography sx={{ textAlign: 'center', width: '100%' }}>Change Password</Typography>
-    </MenuItem>
+                  <MenuItem onClick={() => { handleCloseUserMenu(); router.push("/change-password"); }}>
+                    <Typography sx={{ textAlign: 'center', width: '100%' }}>Change Password</Typography>
+                  </MenuItem>
 
-    <MenuItem onClick={logout}>
-      <Typography sx={{ textAlign: 'center', color: 'error.main', width: '100%' }}>Logout</Typography>
-    </MenuItem>
-  </Box>
-) : (
+                  <MenuItem onClick={logout}>
+                    <Typography sx={{ textAlign: 'center', color: 'error.main', width: '100%' }}>Logout</Typography>
+                  </MenuItem>
+                </Box>
+              ) : (
                 <Box>
                   <MenuItem onClick={handleCloseUserMenu}>
                     <Typography sx={{ textAlign: 'center' }}>

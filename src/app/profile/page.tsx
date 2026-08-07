@@ -1,20 +1,37 @@
 "use client";
 
 import { State, AppDispatch } from "@/lib/store";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { getUserPost } from "@/lib/postslice";
 import { getMyProfile } from "@/lib/userslice";
 import Loading from "../loading";
 import Posts from "../_posts/page";
 import { Post } from "@/interfaces/state";
-import { Box, Avatar, Typography, Paper, Chip, Container, Divider } from "@mui/material";
+import { 
+  Box, 
+  Avatar, 
+  Typography, 
+  Paper, 
+  Chip, 
+  Container, 
+  Divider, 
+  IconButton, 
+  CircularProgress 
+} from "@mui/material";
 import PostAddIcon from '@mui/icons-material/PostAdd';
+import PhotoCameraIcon from '@mui/icons-material/PhotoCamera';
+import toast from "react-hot-toast";
 
 export default function Profile() {
   const { isLoading: postsLoading, userPosts } = useSelector((state: State) => state.post);
   const { isLoading: userLoading, myProfile } = useSelector((state: State) => state.user);
+  const token = useSelector((state: State) => state.login.token);
   const dispatch = useDispatch<AppDispatch>();
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [photoKey, setPhotoKey] = useState(Date.now());
 
   useEffect(() => {
     dispatch(getMyProfile());
@@ -26,13 +43,57 @@ export default function Profile() {
     }
   }, [dispatch, myProfile?._id]);
 
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const authToken = token || localStorage.getItem("token");
+    if (!authToken) {
+      toast.error("Session expired, please login again");
+      return;
+    }
+
+    const cleanToken = authToken.replace(/^"(.*)"$/, '$1');
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    try {
+      setIsUploadingPhoto(true);
+
+      const res = await fetch(`https://route-posts.routemisr.com/users/upload-photo`, {
+        method: "PUT",
+        headers: {
+          token: cleanToken,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        toast.success("Profile photo uploaded successfully! 🎉");
+        setPhotoKey(Date.now());
+        dispatch(getMyProfile());
+      } else {
+        toast.error(data.message || "Failed to upload photo");
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong while uploading photo");
+    } finally {
+      setIsUploadingPhoto(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
   const isLoading = postsLoading || userLoading;
 
   if (isLoading) return <Loading />;
 
   return (
     <Container maxWidth="md" sx={{ py: 4 }}>
-      {/* 👤 كارت البروفايل */}
       {myProfile && (
         <Paper
           elevation={0}
@@ -47,22 +108,49 @@ export default function Profile() {
             boxShadow: "0 8px 24px rgba(0,0,0,0.04)"
           }}
         >
-          {/* الصورة الشخصية */}
-          <Avatar
-            src={myProfile.photo}
-            alt={myProfile.name}
-            sx={{
-              width: 110,
-              height: 110,
-              mx: "auto",
-              mb: 2,
-              border: "3px solid",
-              borderColor: "primary.main",
-              boxShadow: "0 4px 14px rgba(0,0,0,0.12)"
-            }}
-          />
+          <Box sx={{ position: "relative", width: 110, height: 110, mx: "auto", mb: 2 }}>
+            <Avatar
+              src={myProfile.photo ? `${myProfile.photo}?t=${photoKey}` : undefined}
+              alt={myProfile.name}
+              sx={{
+                width: 110,
+                height: 110,
+                border: "3px solid",
+                borderColor: "primary.main",
+                boxShadow: "0 4px 14px rgba(0,0,0,0.12)"
+              }}
+            />
 
-          {/* اسم المستخدم والإيميل */}
+            <IconButton
+              color="primary"
+              disabled={isUploadingPhoto}
+              onClick={() => fileInputRef.current?.click()}
+              sx={{
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+                backgroundColor: "background.paper",
+                boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+                "&:hover": { backgroundColor: "action.hover" },
+                p: 0.8
+              }}
+            >
+              {isUploadingPhoto ? (
+                <CircularProgress size={20} color="primary" />
+              ) : (
+                <PhotoCameraIcon fontSize="small" />
+              )}
+            </IconButton>
+
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              onChange={handlePhotoChange}
+              style={{ display: "none" }}
+            />
+          </Box>
+
           <Typography variant="h5" fontWeight={700} sx={{ letterSpacing: "-0.5px" }}>
             {myProfile.name}
           </Typography>
@@ -71,7 +159,6 @@ export default function Profile() {
             {myProfile.email}
           </Typography>
 
-          {/* البايو (Bio) */}
           {myProfile.bio && (
             <Typography
               variant="body2"
@@ -90,7 +177,6 @@ export default function Profile() {
             </Typography>
           )}
 
-          {/* المتابعين و المتابِعين */}
           <Box sx={{ display: "flex", justifyContent: "center", gap: 1.5, mt: 3 }}>
             <Chip
               label={`${myProfile.followersCount || 0} Followers`}
@@ -114,7 +200,6 @@ export default function Profile() {
         </Typography>
       </Divider>
 
-      {/* 📝 قائمة البوستات */}
       <Box sx={{ maxWidth: 650, mx: "auto" }}>
         {userPosts?.length > 0 ? (
           userPosts.map((post: Post) => (

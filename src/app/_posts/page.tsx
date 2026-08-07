@@ -136,23 +136,39 @@ const handleShare = async () => {
   }
 };
 
-  // ✏️ 6️⃣ Update Post
-  const handleUpdatePost = async () => {
-    if (!editBody.trim()) return toast.error("Post text cannot be empty");
-    setUpdating(true);
+// 🆕 أضف الـ states دول فوق مع باقي الـ states
+const [editImage, setEditImage] = React.useState<File | null>(null);
+const [editImagePreview, setEditImagePreview] = React.useState("");
 
-    try {
-      const formData = new FormData();
-      formData.append("body", editBody);
+const handleUpdatePost = async () => {
+  if (!editBody.trim() && !editImage) return toast.error("Post text or image is required");
+  setUpdating(true);
 
-      await dispatch(updatePost({ postId: posts._id, formData })).unwrap();
-      setOpenEdit(false);
-    } catch (err: any) {
-      toast.error(typeof err === "string" ? err : "Failed to update post");
-    } finally {
-      setUpdating(false);
-    }
-  };
+  try {
+    const formData = new FormData();
+    if (editBody.trim()) formData.append("body", editBody);
+    if (editImage) formData.append("image", editImage); // ⬅️ ده اللي كان ناقص!
+
+    await dispatch(updatePost({ postId: posts._id, formData })).unwrap();
+    setOpenEdit(false);
+    setEditImage(null);
+    setEditImagePreview("");
+    toast.success("Post updated successfully!");
+  } catch (err: any) {
+    toast.error(typeof err === "string" ? err : "Failed to update post");
+  } finally {
+    setUpdating(false);
+  }
+};
+
+// 🆕 دالة تغيير الصورة في التعديل
+const handleEditImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    setEditImage(file);
+    setEditImagePreview(URL.createObjectURL(file));
+  }
+};
 
   // 💬 7️⃣ إضافة تعليق مع التحديث اللحظي (Instant UI Update)
   const handleAddComment = async (e: React.FormEvent) => {
@@ -530,25 +546,89 @@ const handleShare = async () => {
       </Collapse>
 
       {/* Dialog تعديل البوست */}
-      <Dialog open={openEdit} onClose={() => setOpenEdit(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Update Post</DialogTitle>
-        <DialogContent>
-          <TextField
-            fullWidth
-            multiline
-            rows={4}
-            value={editBody}
-            onChange={(e) => setEditBody(e.target.value)}
-            sx={{ mt: 1 }}
+      {/* 🆕 Dialog تعديل البوست - المعدل */}
+<Dialog open={openEdit} onClose={() => {
+  setOpenEdit(false);
+  setEditImage(null);
+  setEditImagePreview("");
+}} fullWidth maxWidth="sm">
+  <DialogTitle>Update Post</DialogTitle>
+  <DialogContent>
+    <TextField
+      fullWidth
+      multiline
+      rows={4}
+      value={editBody}
+      onChange={(e) => setEditBody(e.target.value)}
+      sx={{ mt: 1 }}
+      placeholder="What's on your mind?"
+    />
+    
+    {/* 🆕 زر اختيار صورة جديدة */}
+    <Box sx={{ mt: 2 }}>
+      <Button
+        variant="outlined"
+        component="label"
+        startIcon={<ImageIcon />}
+        size="small"
+      >
+        {editImage ? "Change Image" : "Add Image"}
+        <input
+          type="file"
+          hidden
+          accept="image/*"
+          onChange={handleEditImageChange}
+        />
+      </Button>
+      
+      {/* 🆕 معاينة الصورة الجديدة أو القديمة */}
+      {(editImagePreview || posts.image) && (
+        <Box sx={{ mt: 1, position: "relative" }}>
+          <Box
+            component="img"
+            src={editImagePreview || posts.image}
+            alt="post preview"
+            sx={{ 
+              maxWidth: "100%", 
+              maxHeight: 200, 
+              borderRadius: 2,
+              objectFit: "cover" 
+            }}
           />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEdit(false)}>Cancel</Button>
-          <Button onClick={handleUpdatePost} variant="contained" disabled={updating}>
-            {updating ? "Updating..." : "Update"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+          {editImage && (
+            <IconButton
+              size="small"
+              color="error"
+              sx={{ position: "absolute", top: 4, right: 4, bgcolor: "rgba(255,255,255,0.8)" }}
+              onClick={() => {
+                setEditImage(null);
+                setEditImagePreview("");
+              }}
+            >
+              <DeleteOutlineIcon fontSize="small" />
+            </IconButton>
+          )}
+        </Box>
+      )}
+    </Box>
+  </DialogContent>
+  <DialogActions>
+    <Button onClick={() => {
+      setOpenEdit(false);
+      setEditImage(null);
+      setEditImagePreview("");
+    }}>
+      Cancel
+    </Button>
+    <Button 
+      onClick={handleUpdatePost} 
+      variant="contained" 
+      disabled={updating || (!editBody.trim() && !editImage)}
+    >
+      {updating ? "Updating..." : "Update"}
+    </Button>
+  </DialogActions>
+</Dialog>
     </Card>
   );
 }
