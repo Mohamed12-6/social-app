@@ -317,8 +317,8 @@ const handleAddComment = async (e: React.FormEvent) => {
                         </Avatar>
                       }
                       action={
-                        (loggedin === comment.commentCreator?._id || loggedin === comment.commentCreator?.id) ? (
-                          <IconButton size="small" onClick={() => deleteComment(comment._id)}>
+// ✅ السطر الجديد
+(loggedin === comment.commentCreator?._id || loggedin === (comment.commentCreator as any)?.id) ? (                          <IconButton size="small" onClick={() => deleteComment(comment._id)}>
                             <DeleteOutlineIcon fontSize="small" color="error" />
                           </IconButton>
                         ) : null

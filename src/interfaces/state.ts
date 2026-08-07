@@ -38,15 +38,18 @@ export interface Root {
   
   export interface User {
     _id: string
+    id?: string; // 👈 أضف السطر ده هنا
     name: string
     photo: string
   }
   
   export interface Comment {
+    repliesCount?: number; // 👈 إضافة repliesCount
     _id: string
     content?: string
     commentCreator: User
     post: string
     createdAt: string
+    image?: string; // 👈 أضف السطر ده هنا
   }
   
