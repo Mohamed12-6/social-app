@@ -1,13 +1,14 @@
 module.exports = {
-    images: {
-      remotePatterns: [
-        {
-            // https://linked-posts.routemisr.com/uploads/default-profile.png
-          protocol: 'https',
-          hostname: 'linked-posts.routemisr.com',
-          pathname: '/uploads/**',
-          search: '',
-        },
-      ],
-    },
+   images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev',
+      },
+      {
+        protocol: 'https',
+        hostname: 'https://route-posts.routemisr.com',
+      },
+    ],
+  },
   }

@@ -32,6 +32,8 @@ export interface Root {
     createdAt: string
     comments: Comment[]
     id: string
+    privacy?: string        // 👈 جديد (public/private)
+    sharedPost?: Post | null // 👈 جديد للـ share
   }
   
   export interface User {

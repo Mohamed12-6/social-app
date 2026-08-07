@@ -24,7 +24,9 @@ const geistMono = Geist_Mono({
 
 
 export default function RootLayout({children}:{children:ReactNode})
+
 {
+    
   return (
     <html lang="en">
               <Provider store={store}>
